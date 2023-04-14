@@ -1,5 +1,6 @@
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicMarkableReference;
 import java.util.stream.IntStream;
@@ -21,18 +22,23 @@ import java.util.stream.IntStream;
 
 public class ProblemOne {
     static AtomicInteger atomCounter = new AtomicInteger();//used to pick random presents
-    static int[] presentBag;
+    static List<Integer> presentBag = new ArrayList<>();
 
     public static void main(String[] args) throws InterruptedException {
         //generates and orders 500,000 unique present IDs
-        presentBag = IntStream.rangeClosed(1, 500000).toArray();
-        Collections.shuffle(Collections.singletonList(presentBag));
+        int[] presentBagArr = IntStream.rangeClosed(1, 500000).toArray();
+        for (int j : presentBagArr) {
+            presentBag.add(j);
+        }
+        Collections.shuffle(presentBag);
 
         //creates 4 servants
         servantThread[] staff = new servantThread[4];
         for (int i = 0; i < 4; i++) {
             staff[i] = new servantThread();
         }
+
+        presentChain.presentChainSetUp();
 
         //get servants to start working
         for (ProblemOne.servantThread servantThread : staff) {
@@ -42,16 +48,6 @@ public class ProblemOne {
         for (ProblemOne.servantThread servantThread : staff) {
             servantThread.join();
         }
-        //print every node to show that no more presents are left chained
-        //Alright, if everything is successful we should only see the Ur-Fruitcake gifts at either end of the chain!
-        Present pred = presentChain.head;
-        Present curr = presentChain.head.next.getReference();
-        System.out.println("First present in the chain is ID ["+pred.id+"]");
-        while (curr != null) {
-            System.out.println("Next present in the chain is ID ["+curr.id+"]");
-            pred = curr;
-            curr = curr.next.getReference();
-        }
     }
 
     public static class servantThread extends Thread {
@@ -59,8 +55,8 @@ public class ProblemOne {
             int i = atomCounter.getAndIncrement();
             while (i < 500000) {
                 //Every servant asked to alternate adding gifts and writing "Thank You"s
-                presentChain.add(presentBag[i]);// add gift
-                presentChain.remove(presentBag[i]);// Write Thank You
+                presentChain.add(presentBag.get(i));// add gift
+                presentChain.remove(presentBag.get(i));// Write Thank You
                 i = atomCounter.getAndIncrement();// Grab the next gift in the unsorted pile
             }
         }
@@ -78,9 +74,9 @@ public class ProblemOne {
 
     public static Window find(Present head, int key) {
         //Look through the present chain and set aside any presents we've already written "Thank You" for
-        Present pred = null;
-        Present curr = null;
-        Present succ = null;
+        Present pred;
+        Present curr;
+        Present succ;
 
         boolean[] marked = {false};
         boolean snip;
@@ -117,7 +113,7 @@ public class ProblemOne {
 
         public Present(int guestNumber) {
             id = guestNumber;
-            next = null;
+            next = new AtomicMarkableReference<>(presentChain.tail, false);
         }
     }
 
@@ -125,21 +121,20 @@ public class ProblemOne {
         static Present head;
         static Present tail;
 
-        public presentChain() {//use some dreadful Ur-Fruitcakes to hold the ends of the chain
+        public static void presentChainSetUp() {//use some dreadful Ur-Fruitcakes to hold the ends of the chain
             head = new Present(Integer.MIN_VALUE);
             tail = new Present(Integer.MAX_VALUE);
-            head.next = new AtomicMarkableReference(tail, false);
+            head.next = new AtomicMarkableReference<>(tail, false);
         }
 
         public static boolean add(int target) {// We have a present from the bag, lets add it to the chain
-            int key = target;
 
             while (true) {
-                Window window = find(head, key);//starts at the head of the present chain and find the right location
+                Window window = find(head, target);//starts at the head of the present chain and find the right location
                 Present pred = window.pred;//get pred and curr nodes to use
                 Present curr = window.curr;
 
-                if (curr.id == key) { //present somehow already here... Huh?
+                if (curr.id == target) { //present somehow already here... Huh?
                     System.out.println("RED ALERT: WE'VE BROKEN THE LAWS OF PHYSICS AND HAVE TWO OF THE SAME THING!");
                     return false;
                 } else { //Phew, we only have one copy of this present
@@ -156,15 +151,14 @@ public class ProblemOne {
         }
 
         public static boolean remove(int target) {
-            int key = target;
             boolean snip;
 
             while (true) {
-                Window window = find(head, key);
+                Window window = find(head, target);
                 Present pred = window.pred;//get pred and curr nodes to use
                 Present curr = window.curr;
 
-                if (curr.id != key) {//Nope! Present isn't here!
+                if (curr.id != target) {//Nope! Present isn't here!
                     System.out.println("RED ALERT: ONE OF THE SERVANTS IS A THIEF, THE GIFT I JUST ADDED IS MISSING!");
                     return false;
                 } else {
@@ -186,15 +180,14 @@ public class ProblemOne {
 
         public static boolean contains(int target) {
             boolean[] marked = {false};
-            int key = target;
             Present curr = head;
 
-            while (curr.id < key) {
+            while (curr.id < target) {
                 curr = curr.next.getReference();
                 Present succ = curr.next.get(marked);
             }
 
-            return (curr.id == key && !marked[0]);//Found it! No one has written "Thank You" for it yet.
+            return (curr.id == target && !marked[0]);//Found it! No one has written "Thank You" for it yet.
         }
     }
 }
