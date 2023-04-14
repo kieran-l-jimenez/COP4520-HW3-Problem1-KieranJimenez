@@ -34,4 +34,15 @@ dedicating 1 thread per servant and assuming that the Minotaur received 500,000
 presents from his guests.
 
 ## Solution:
+What I think originally went wrong with the Minotaur's system was probably a simple 
+counting issue as well as multiple servants removing a present. Basically, they 
+probably incremented a counter whenever they removed a present and just stopped 
+when it was equal to the number of presents they added in. 
 
+For my strategy I kept the servants alternating between adding gifts and writing 
+"Thank You" cards, but I broke up their duties a little bit. The most important
+difference I think is that I had the servants just stamp the present and attempt to
+remove it. If they didn't remove it, it's fine since when they look along the chain for 
+where to insert or take out a present they remove any stamped presents that were left 
+behind. It is also really good since the servants don't have to keep a hand on two 
+presents as they go down the chain.
